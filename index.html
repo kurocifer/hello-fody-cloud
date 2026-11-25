@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ulquiorra | Cuatro Espada</title>
+<style>
+  :root {
+    --sand: #e9e8e3;
+    --void: #0c0d0c;
+    --ash: #5f635e;
+    --tear: #1f8a6e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --sand: #0c0d0c; --void: #e9e8e3; --ash: #9a9e98; --tear: #3fc9a0; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--sand);
+    color: var(--void);
+    font-family: Georgia, "Times New Roman", serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* the two tear marks */
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    width: 2px;
+    background: var(--tear);
+    height: 0;
+    animation: fall 2.4s ease-out forwards;
+  }
+  body::before { left: calc(50% - min(38vw, 300px)); }
+  body::after  { right: calc(50% - min(38vw, 300px)); }
+  @keyframes fall { to { height: 62vh; } }
+
+  main { max-width: 34rem; text-align: center; width: 100%; }
+  h1 {
+    font-weight: 400;
+    font-size: clamp(2.4rem, 8vw, 4rem);
+    letter-spacing: 0.04em;
+    margin: 0 0 0.3rem;
+  }
+  .rank { color: var(--ash); font-style: italic; margin: 0 0 2.5rem; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  blockquote {
+    margin: 0;
+    font-size: clamp(1.15rem, 3.4vw, 1.5rem);
+    line-height: 1.55;
+    min-height: 8rem;
+  }
+
+  .story-panel {
+    font-size: clamp(1.15rem, 3.4vw, 1.45rem);
+    line-height: 1.6;
+    min-height: 9rem;
+    white-space: pre-line;
+  }
+
+  .nav {
+    margin-top: 2.2rem;
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  button {
+    background: none;
+    color: var(--void);
+    border: 1px solid var(--void);
+    padding: 0.55rem 1.3rem;
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover { background: var(--void); color: var(--sand); }
+  button:focus-visible { outline: 2px solid var(--tear); outline-offset: 3px; }
+  button.secondary { border-color: var(--ash); color: var(--ash); }
+  button.secondary:hover { background: var(--ash); color: var(--sand); }
+
+  footer { margin-top: 2.8rem; color: var(--ash); font-size: 0.85rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    body::before, body::after { animation: none; height: 62vh; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ulquiorra Cifer</h1>
+  <p class="rank">Cuarta Espada, Las Noches</p>
+
+  <!-- QUOTES PAGE -->
+  <div id="quotes-page" class="page active">
+    <blockquote id="quote"></blockquote>
+    <div class="nav">
+      <button id="next-quote" type="button">Next quote</button>
+      <button id="to-story" type="button" class="secondary">The Void (flashback)</button>
+    </div>
+  </div>
+
+  <!-- STORY / FLASHBACK PAGE -->
+  <div id="story-page" class="page">
+    <div class="story-panel" id="story-text"></div>
+    <div class="nav">
+      <button id="prev-panel" type="button" class="secondary">Previous</button>
+      <button id="next-panel" type="button">Next panel</button>
+      <button id="to-quotes" type="button" class="secondary">Back to quotes</button>
+    </div>
+  </div>
+
+  <footer>Deployed from a public Git repo to my own cloud.</footer>
+</main>
+
+<script>
+  // Real Ulquiorra quotes (manga / anime)
+  const quotes = [
+    "If this eye cannot see a thing, then it does not exist. That is the assumption under which I have always fought.",
+    "What is this \"heart\"? If I tear open that chest of yours, will I see it there? If I smash open that skull of yours, will I see it there?",
+    "Hearts, you say? You Humans are always so quick to speak of such things. As though you carry your hearts in the very palms of your hands. But this eye of mine perceives all. There is nothing that it overlooks. If this eye cannot see a thing, then it does not exist. That is the assumption under which I have always fought. What is this \"heart\"? If I tear open that chest of yours, will I see it there? If I smash open that skull of yours, will I see it there?",
+    "If there is such a thing as happiness in this world, it should resemble the endless nothingness. Nihility is having nothing and having nothing to lose. If that isn't happiness… then what is?",
+    "Kurosaki Ichigo, those are the words of someone who does not know true despair. So I will show you. This is what true despair looks like.",
+    "Even if you rise up a thousand times, there will be no victory for any of you.",
+    "I see. So you show no mercy. Just like a true Hollow. I care not. Defeated by you as I stand, my existence holds no further meaning. Do it.",
+    "Kill me. Make it quick. I no longer have the strength left in me to even walk. If you do not cut me down now, then this will go unsettled for eternity.",
+    "If it is because of what you call a heart, then it is the heart that causes you humans pain. It is because of your heart that you will die.",
+    "We are nothingness. Our head is a void. And without anything around us, we are nothing. We become what we perceive.",
+    "I see… this… is the heart."
+  ];
+
+  // Flashback text split into sequential panels
+  // (matching the panel-by-panel pacing of the "not be, but be" chapter)
+  const storyPanels = [
+    "What is there…\nover there?",
+    "There is nothing.",
+    "I was born in the bottom of a pit\nwhere no light shone.",
+    "As if pressed together by the darkness.\nUncertain of those dark, dark sediments.",
+    "I had a white form.\nMy comrades were all pure black.",
+    "In those black forms,\nwith their eyes shining and teeth bared,\nthey were eating something.",
+    "And then…\nthere was nothing to me except my eyes.",
+    "I felt nothing.\nNo—rather, it was possible that what I felt was “void”.",
+    "Yet I could hear nothing.\nI could bite nothing.\nI could smell nothing.\nI could feel nothing when I touched.",
+    "I could not rest.\nI had no companions.\nI walked alone.",
+    "The things reflected in my eyes had no meaning.\nThe things that could not be reflected in my eyes\ndid not exist.",
+    "I walked…\nand arrived at a thought.",
+    "I found something extraordinary.\nFor the first time, my eyes were captivated.",
+    "The existence closest to the “void”\nthat I had ever seen.",
+    "I sank my body into that great void.",
+    "Even I lost my line of vision\nand dissolved into the void…\nand felt as if everything had disappeared.",
+    "If such a thing called happiness exists in this world,\nit should be something which resembles\nthe limitless nothingness.",
+    "Nihility is having nothing,\nand having nothing to lose.\nIf that isn’t “happiness”… then what is?",
+    "There is nothing…\nin you…\nand in me."
+  ];
+
+  // Quotes logic
+  const quoteEl = document.getElementById("quote");
+  let quoteIndex = Math.floor(Math.random() * quotes.length);
+
+  function showQuote() {
+    quoteEl.textContent = "“" + quotes[quoteIndex] + "”";
+  }
+
+  document.getElementById("next-quote").addEventListener("click", () => {
+    quoteIndex = (quoteIndex + 1) % quotes.length;
+    showQuote();
+  });
+
+  // Story logic
+  const storyEl = document.getElementById("story-text");
+  let panelIndex = 0;
+
+  function showPanel() {
+    storyEl.textContent = storyPanels[panelIndex];
+    document.getElementById("prev-panel").disabled = panelIndex === 0;
+    document.getElementById("next-panel").textContent =
+      panelIndex === storyPanels.length - 1 ? "Restart" : "Next panel";
+  }
+
+  document.getElementById("next-panel").addEventListener("click", () => {
+    if (panelIndex === storyPanels.length - 1) {
+      panelIndex = 0;
+    } else {
+      panelIndex++;
+    }
+    showPanel();
+  });
+
+  document.getElementById("prev-panel").addEventListener("click", () => {
+    if (panelIndex > 0) {
+      panelIndex--;
+      showPanel();
+    }
+  });
+
+  // Page switching
+  const quotesPage = document.getElementById("quotes-page");
+  const storyPage = document.getElementById("story-page");
+
+  document.getElementById("to-story").addEventListener("click", () => {
+    quotesPage.classList.remove("active");
+    storyPage.classList.add("active");
+    panelIndex = 0;
+    showPanel();
+  });
+
+  document.getElementById("to-quotes").addEventListener("click", () => {
+    storyPage.classList.remove("active");
+    quotesPage.classList.add("active");
+  });
+
+  // Init
+  showQuote();
+</script>
+</body>
+</html>
