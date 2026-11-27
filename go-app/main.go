@@ -4,9 +4,43 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 )
 
-var hog [][]byte
+var (
+	mu   sync.Mutex
+	hog  [][]byte
+	once sync.Once
+)
+
+const maxMiB = 500 // safety stop in case no memory limit is applied
+
+func eat() {
+	for {
+		mu.Lock()
+		held := len(hog) * 10
+		mu.Unlock()
+
+		if held >= maxMiB {
+			fmt.Println("reached safety cap, stopping at", held, "MiB")
+			return
+		}
+
+		b := make([]byte, 10<<20) // 10 MiB
+		for j := 0; j < len(b); j += 4096 {
+			b[j] = 1 // touch every page so the memory is really used
+		}
+
+		mu.Lock()
+		hog = append(hog, b)
+		held = len(hog) * 10
+		mu.Unlock()
+
+		fmt.Println("holding", held, "MiB")
+		time.Sleep(200 * time.Millisecond)
+	}
+}
 
 func main() {
 	port := os.Getenv("PORT")
@@ -20,14 +54,8 @@ func main() {
 	})
 
 	http.HandleFunc("/eat", func(w http.ResponseWriter, r *http.Request) {
-		for i := 0; i < 20; i++ {
-			b := make([]byte, 10<<20) // 10 MiB
-			for j := 0; j < len(b); j += 4096 {
-				b[j] = 1 // touch every page so the memory is really used
-			}
-			hog = append(hog, b)
-		}
-		fmt.Fprintf(w, "holding %d MiB\n", len(hog)*10)
+		once.Do(func() { go eat() })
+		fmt.Fprintln(w, "started eating memory, watch docker stats")
 	})
 
 	fmt.Println("listening on port: ", port)
