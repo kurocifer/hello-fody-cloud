@@ -14,7 +14,7 @@ var (
 	once sync.Once
 )
 
-const maxMiB = 500 // safety stop in case no memory limit is applied
+const maxMiB = 500
 
 func eat() {
 	for {
